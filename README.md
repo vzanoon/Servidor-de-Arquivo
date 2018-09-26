@@ -8,7 +8,8 @@ As operações permitidas pelo sistema devem incluir:
 - criar arquivo  
 - remover arquivo 
 - escrever um sequência de caracteres em um arquivo 
-- mostrar conteúdo do arquivo 
+- mostrar conteúdo do arquivo
+
 #--------------------------------------------------------------
                             Etapa 1:
 #--------------------------------------------------------------
