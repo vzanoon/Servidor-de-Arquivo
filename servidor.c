@@ -244,7 +244,32 @@ void Criar_DIR(int connfd)
 
 void Remover_DIR(int connfd)
 {
+	char sendBuff[BYTE];
+	char recvBuff[BYTE];
+	//char current_dir_name[BYTE];
+	int tamBuff=0;
+
+	//getcwd(current_dir_name, sizeof(current_dir_name));
+	//printf("%s\n",current_dir_name);
 	
+	snprintf(sendBuff, sizeof(sendBuff), "Excluir diretório, digite o nome: \n");
+	send(connfd,sendBuff,strlen(sendBuff), 0);
+	
+	tamBuff = recv(connfd,recvBuff,BYTE, 0);
+	recvBuff[tamBuff] = 0x00;
+	
+	char comando[1024]  = "rmdir ";
+	strcat(comando,recvBuff);
+		
+	if (system(comando) == 0)
+	{
+		snprintf(sendBuff, sizeof(sendBuff), "Diretório excluído com sucesso. \n");
+		send(connfd,sendBuff,strlen(sendBuff), 0);
+	}else
+		{			
+		snprintf(sendBuff, sizeof(sendBuff), "Erro ao excluir diretório. \n");
+		send(connfd,sendBuff,strlen(sendBuff), 0);
+		}
 	
 }  
 
@@ -347,6 +372,8 @@ void Escrever_FILE(int connfd)
 	
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	strcat(sendBuff, "\n");
+
  
 		FILE *arquivo; 
 		arquivo = fopen(recvBuff,"a+");
