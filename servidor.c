@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <windows.h>
 #include <locale.h>
+#include <dirent.h>
+#include <pthread.h>
 
 //#include <dirent.h>
 //#include <pthread.h>
@@ -22,15 +24,15 @@
 void Ajuda(int connfd);
 void Criar_DIR(int connfd);
 void Remover_DIR(int connfd);
-void Entrar_DIR(int connfd);
-void Mostrar_DIR(int connfd);
+void Entrar_DIR(int connfd, DIR **current_dir);
+void Sair_DIR(int connfd, DIR **current_dir);
+void Mostrar_DIR(int connfd, DIR *current_dir);
 void Criar_FILE(int connfd);
 void Remover_FILE(int connfd);
 void Escrever_FILE(int connfd);
 void Mostrar_FILE(int connfd);
 void CMD(int connfd);
 void Invalido(int connfd);
-
 
 
 int main(int argc, char *argv[]){
@@ -96,15 +98,19 @@ int main(int argc, char *argv[]){
 		
 		while(connfd = accept(listenfd, (struct sockaddr*)NULL, NULL))
 		{
-		
-			
+	
 			printf("Cliente conectado!\n");
+			// O tipo DIR representa um fluxo de diretório, isto é, uma seq. ordenada
+			// de todas as entradas de um diretório até um diretório específico.
+			DIR *current_dir = NULL; 
+			char current_dir_name[BYTE]; // área onde será armazenado o nome do diretório de trabalho
+			// Função getcwd() obtém o nome do caminho do diretório de trabalho
+			getcwd(current_dir_name, sizeof(current_dir_name)); 
+			current_dir = opendir(current_dir_name);// abre um diretório
 
-			snprintf(sendBuff, sizeof(sendBuff), "Conectado!\n");
-			//write(connfd, sendBuff, strlen(sendBuff));
-		
-			//strcpy(sendBuff,"Servidor diz: ola!!!");
+			printf("> Diretório atual: %s\n\n",current_dir_name);		
 			
+			snprintf(sendBuff, sizeof(sendBuff), "Conectado!\n");
 			send(connfd,sendBuff,strlen(sendBuff), 0);
 		
 			do
@@ -139,13 +145,19 @@ int main(int argc, char *argv[]){
 				if (strcmp(recvBuff,"edir") == 0)
 				{
 					printf("> %s\n",recvBuff);
-					Entrar_DIR(connfd);
+					Entrar_DIR(connfd,&current_dir);
+				}else
+					
+				if (strcmp(recvBuff,"sdir") == 0)
+				{
+					printf("> %s\n",recvBuff);
+					Sair_DIR(connfd,&current_dir);
 				}else
 
 				if (strcmp(recvBuff,"mdir") == 0)
 				{
 					printf("> %s\n",recvBuff);
-					Mostrar_DIR(connfd);
+					Mostrar_DIR(connfd,current_dir);
 				}else
 				
 				if (strcmp(recvBuff,"cfile") == 0)
@@ -275,17 +287,57 @@ void Remover_DIR(int connfd)
 
 
 
-void Entrar_DIR(int connfd)
+void Entrar_DIR(int connfd, DIR **current_dir)
 {
 	
 	
+	
+	
+	// Se existirem entradas para ponto ou ponto-ponto, uma entrada será retornada para ponto
+    // e uma entrada será retornada para ponto-ponto; caso contrário, eles não serão devolvidos.
 } 
 
 
-
-void Mostrar_DIR(int connfd)
+void Sair_DIR(int connfd, DIR **current_dir)
 {
+
+
+}
+
+
+
+void Mostrar_DIR(int connfd, DIR *current_dir)
+{	
+	// O tipo DIR representa um fluxo de diretório, isto é, uma seq. ordenada
+	// de todas as entradas de um diretório até um diretório específico.
+		
+	char sendBuff[BYTE]; // buffer de envio
+	char recvBuff[BYTE]; // buffer de recebimento
+	char current_dir_name[BYTE]; // área onde será armazenado o nome do diretório de trabalho
+	struct dirent *dir = NULL; // O dirent da estrutura descreve uma entrada de diretório. 
 	
+	// Esta função fornece o diretório atual de trabalho do processo.
+	getcwd(current_dir_name, sizeof(current_dir_name));
+
+	memset(sendBuff, 0, sizeof(sendBuff)); // preenche área de memoria com 0
+	// concatena o nome do diretorio de trabalho ao buffer de envio  
+	strcat(sendBuff,"Diretótio > ");
+	strcat(sendBuff,current_dir_name);
+	strcat(sendBuff,"\n\n\t");
+	
+	// A função readdir () retorna um ponteiro para uma estrutura que representa
+    // a entrada de diretório na posição atual no fluxo de diretório especificado
+    // pelo argumento current_dir e posiciona o fluxo de diretório na próxima entrada. 
+	// Ela retorna um ponteiro nulo ao atingir o final do fluxo do diretório. 
+	
+	while(dir = readdir(current_dir)){ // listagem do diretório
+		strcat(sendBuff, dir->d_name);
+		strcat(sendBuff, "\t\n\t");
+	}
+	strcat(sendBuff, "\n");
+	// função redefine a posição de um fluxo de diretório para o início do diretório raiz
+	rewinddir(current_dir);	
+	send(connfd,sendBuff,strlen(sendBuff),0);	
 	
 } 
 
