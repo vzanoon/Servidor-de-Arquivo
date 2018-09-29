@@ -11,11 +11,8 @@
 #include <locale.h>
 #include <dirent.h>
 #include <pthread.h>
-
-//#include <dirent.h>
-//#include <pthread.h>
-//#include <semaphore.h>
-//#include <sys/stat.h>
+#include <semaphore.h>
+#include <sys/stat.h>
 
 #define BYTE 16384
 #define PORTA 5000
@@ -33,6 +30,7 @@ void Escrever_FILE(int connfd);
 void Mostrar_FILE(int connfd);
 void CMD(int connfd);
 void Invalido(int connfd);
+void retENT(char *recvBuff);
 
 
 int main(int argc, char *argv[]){
@@ -115,10 +113,8 @@ int main(int argc, char *argv[]){
 		
 			do
 			{
-				
+				// A função recv() retorna o número de bytes recebidos
 				tamBuff = recv(connfd,recvBuff,BYTE, 0);
-				//tamBuff = recv(connfd,recvBuff,strlen(sendBuff), 0);
-				//tamBuff = read(connfd,recvBuff,BYTE);
 				recvBuff[tamBuff] = 0x00;
 
 				
@@ -212,11 +208,11 @@ int main(int argc, char *argv[]){
 void Ajuda(int connfd)
 {
 	char sendBuff[BYTE];
-	char recvBuff[BYTE];
+	//char recvBuff[BYTE];
 	//char current_dir_name[BYTE];
 	int tamBuff=0;
 	
-	snprintf(sendBuff, sizeof(sendBuff), "\n ######### AJUDA #########\n cdir    -  cria diretório\n rdir    -remove diretório\n edir    - entra diretório\n mdir    -mostra diretório\n cfile   -    cria arquivo\n rfile   -  remove arquivo\n efile   - escreve arquivo\n mfile   -  mostra arquivo\n cmd     -  comando prompt\n sair    -        encerrar\n");
+	snprintf(sendBuff, sizeof(sendBuff), "\n   | CODE |         MENU         |#|\n   | cdir | Criar    Diretório   |#|\n   | rdir | Remover  Diretório   |#|\n   | edir | Entrar   Diretório   |#|\n   | sdir | Sair     Diretório   |#|\n   | mdir | Mostrar  Diretório   |#|\n   | cfile| Criar    Arquivo     |#|\n   | rfile| Remover  Arquivo     |#|\n   | efile| Escrever Arquivo     |#|\n   | mfile| Mostrar  Arquivo     |#|\n   | cmd  | Prompt   Comando     |#|\n   | sair | Encerrar Programa    |#|\n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 }
 
@@ -235,8 +231,10 @@ void Criar_DIR(int connfd)
 	snprintf(sendBuff, sizeof(sendBuff), "Criar diretório, digite o nome: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 	
 	char comando[1024]  = "mkdir ";
 	strcat(comando,recvBuff);
@@ -267,8 +265,10 @@ void Remover_DIR(int connfd)
 	snprintf(sendBuff, sizeof(sendBuff), "Excluir diretório, digite o nome: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 	
 	char comando[1024]  = "rmdir ";
 	strcat(comando,recvBuff);
@@ -289,18 +289,81 @@ void Remover_DIR(int connfd)
 
 void Entrar_DIR(int connfd, DIR **current_dir)
 {
+	// O tipo DIR representa um fluxo de diretório, isto é, uma seq. ordenada
+	// de todas as entradas de um diretório até um diretório específico.
 	
+	char sendBuff[BYTE]; // buffer de envio
+	char recvBuff[BYTE]; // buffer de recebimento
+	char current_dir_name[BYTE]; // área onde será armazenado o nome do diretório de trabalho
+	char pasta[BYTE]; // buffer que define as pastas do diretório de trabalho
+	int tamBuff=0;
+
+	// Esta função fornece o diretório atual de trabalho do processo.
+	getcwd(current_dir_name, sizeof(current_dir_name));
 	
+	snprintf(sendBuff, sizeof(sendBuff), "Entrar em diretório, digite o nome: \n");
+	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
+	tamBuff = recv(connfd,recvBuff,BYTE, 0);
+	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 	
-	// Se existirem entradas para ponto ou ponto-ponto, uma entrada será retornada para ponto
-    // e uma entrada será retornada para ponto-ponto; caso contrário, eles não serão devolvidos.
+	memset(pasta, 0, sizeof(pasta)); // zera buffer
+	
+    strcpy(pasta,current_dir_name); // copiar o nome do diretorio corrente p/ buffer pasta
+	strcat(pasta,"/"); // concatena com uma barra
+	strcat(pasta,recvBuff); // concatena com o buffer recebido
+	
+    if (chdir(pasta) == 0)	// altera p/ o diretório de trabalho atual definido pelo buffer pasta
+	{
+        getcwd(current_dir_name, sizeof(current_dir_name)); // obtém o nome do caminho do diretório de trabalho atual
+        *current_dir = opendir(current_dir_name);	// abre um diretório
+		printf("Entrou no diretório> %s \n",current_dir_name);
+		
+		snprintf(sendBuff, sizeof(sendBuff), "Diretório atual: %s\n",current_dir_name);
+		send(connfd,sendBuff,strlen(sendBuff), 0);
+	}else
+		{			
+		snprintf(sendBuff, sizeof(sendBuff), " Erro ao entrar em diretório. \n");
+		send(connfd,sendBuff,strlen(sendBuff), 0);
+		}
+	
 } 
 
 
 void Sair_DIR(int connfd, DIR **current_dir)
 {
+	// O tipo DIR representa um fluxo de diretório, isto é, uma seq. ordenada
+	// de todas as entradas de um diretório até um diretório específico.
+	
+	char sendBuff[BYTE]; // buffer de envio
+	//char recvBuff[BYTE]; // buffer de recebimento
+	char current_dir_name[BYTE]; // área onde será armazenado o nome do diretório de trabalho
+	char pasta[BYTE]; // buffer que define as pastas do diretório de trabalho
+	int tamBuff=0;
 
+	// Esta função fornece o diretório atual de trabalho do processo.
+	getcwd(current_dir_name, sizeof(current_dir_name));
+	
+	memset(pasta, 0, sizeof(pasta)); // zera buffer
+	
+    strcpy(pasta,current_dir_name); // copiar o nome do diretorio corrente p/ buffer pasta
+	strcat(pasta,"/.."); // concatena com uma barra e dois pontos
+	
+    if (chdir(pasta) == 0)	// altera p/ o diretório de trabalho atual definido pelo buffer pasta
+	{
+        getcwd(current_dir_name, sizeof(current_dir_name)); // obtém o nome do caminho do diretório de trabalho atual
+        *current_dir = opendir(current_dir_name);	// abre um diretório
+		printf("Retornou para o diretório> %s \n",current_dir_name);
+		
+		snprintf(sendBuff, sizeof(sendBuff), "Diretório atual: %s\n",current_dir_name);
+		send(connfd,sendBuff,strlen(sendBuff), 0);
+	}else
+		{			
+		snprintf(sendBuff, sizeof(sendBuff), " Erro ao retornar em diretório. \n");
+		send(connfd,sendBuff,strlen(sendBuff), 0);
+		}
 
 }
 
@@ -312,7 +375,7 @@ void Mostrar_DIR(int connfd, DIR *current_dir)
 	// de todas as entradas de um diretório até um diretório específico.
 		
 	char sendBuff[BYTE]; // buffer de envio
-	char recvBuff[BYTE]; // buffer de recebimento
+	//char recvBuff[BYTE]; // buffer de recebimento
 	char current_dir_name[BYTE]; // área onde será armazenado o nome do diretório de trabalho
 	struct dirent *dir = NULL; // O dirent da estrutura descreve uma entrada de diretório. 
 	
@@ -321,7 +384,7 @@ void Mostrar_DIR(int connfd, DIR *current_dir)
 
 	memset(sendBuff, 0, sizeof(sendBuff)); // preenche área de memoria com 0
 	// concatena o nome do diretorio de trabalho ao buffer de envio  
-	strcat(sendBuff,"Diretótio > ");
+	strcat(sendBuff,"Diretório > ");
 	strcat(sendBuff,current_dir_name);
 	strcat(sendBuff,"\n\n\t");
 	
@@ -356,8 +419,10 @@ void Criar_FILE(int connfd)
 	snprintf(sendBuff, sizeof(sendBuff), "Criar arquivo, digite o nome: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 	
 	char comando[1024]  = "touch ";
 	strcat(comando,recvBuff);
@@ -388,8 +453,10 @@ void Remover_FILE(int connfd)
 	snprintf(sendBuff, sizeof(sendBuff), "Remover arquivo, digite o nome: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 	
 	char comando[BYTE]  = "rm ";
 	strcat(comando,recvBuff);
@@ -422,9 +489,12 @@ void Escrever_FILE(int connfd)
 	snprintf(sendBuff, sizeof(sendBuff), "Escrever no arquivo, digite o nome: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 	strcat(sendBuff, "\n");
+	
 
  
 		FILE *arquivo; 
@@ -469,9 +539,10 @@ void Mostrar_FILE(int connfd)
 	snprintf(sendBuff, sizeof(sendBuff), "Listar arquivo, digite o nome: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
-	
+	retENT(recvBuff);
  
 		FILE *arquivo; 
 		arquivo = fopen(recvBuff,"r");
@@ -497,15 +568,17 @@ void CMD(int connfd)
 	char recvBuff[BYTE];
 	//char current_dir_name[BYTE];
 	int tamBuff=0;
-
+	
 	//getcwd(current_dir_name, sizeof(current_dir_name));
 	//printf("%s\n",current_dir_name);
 	
 	snprintf(sendBuff, sizeof(sendBuff), "Digite o comando: \n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 	
+	// A função recv() retorna o número de bytes recebidos
 	tamBuff = recv(connfd,recvBuff,BYTE, 0);
 	recvBuff[tamBuff] = 0x00;
+	retENT(recvBuff);
 
 	char comando[1024]  = "";
 	strcat(comando,recvBuff);
@@ -527,7 +600,7 @@ void CMD(int connfd)
 void Invalido(int connfd)
 {
 	char sendBuff[BYTE];
-	char recvBuff[BYTE];
+	//char recvBuff[BYTE];
 	//char current_dir_name[BYTE];
 	int tamBuff=0;
 
@@ -538,22 +611,9 @@ void Invalido(int connfd)
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 }
 
-
-/*
-
-		Em linux:
-
-		cd home/
-		gcc -o servidor.exe servidor.c
-		./servidor.exe
-	----------------------------------------------
-		Em Windows:
-
-		cd \
-		cd cygwin64
-		cd home
-		ls
-		gcc servidor.c -o servidor.exe
-		servidor.exe
-
-*/
+void retENT(char *recvBuff)	// remove ENTER do final do buffer recebido
+{
+	
+	if (recvBuff[strlen(recvBuff)-1] == 10) // 10 é o ENTER em ASCII
+		recvBuff[strlen(recvBuff)-1] = 0x00;	
+}
