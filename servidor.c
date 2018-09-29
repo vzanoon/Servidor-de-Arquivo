@@ -92,12 +92,12 @@ int main(int argc, char *argv[]){
 	
 	while(1){
 		
-		printf("Aguardando conexão.\n");
+		printf("Aguardando conexao.\n");
 		
 		while(connfd = accept(listenfd, (struct sockaddr*)NULL, NULL))
 		{
 	
-			printf("Cliente conectado!\n");
+			printf(">: Cliente conectado!\n");
 			// O tipo DIR representa um fluxo de diretório, isto é, uma seq. ordenada
 			// de todas as entradas de um diretório até um diretório específico.
 			DIR *current_dir = NULL; 
@@ -197,7 +197,7 @@ int main(int argc, char *argv[]){
 					}
 			}while(strcmp(recvBuff,"sair") != 0);
 		
-			printf("Cliente desconectado.\n");
+			printf(">: Cliente desconectado.\n");
 			close(connfd);
 			sleep(1);
 		}
@@ -212,7 +212,7 @@ void Ajuda(int connfd)
 	//char current_dir_name[BYTE];
 	int tamBuff=0;
 	
-	snprintf(sendBuff, sizeof(sendBuff), "\n   | CODE |         MENU         |#|\n   | cdir | Criar    Diretório   |#|\n   | rdir | Remover  Diretório   |#|\n   | edir | Entrar   Diretório   |#|\n   | sdir | Sair     Diretório   |#|\n   | mdir | Mostrar  Diretório   |#|\n   | cfile| Criar    Arquivo     |#|\n   | rfile| Remover  Arquivo     |#|\n   | efile| Escrever Arquivo     |#|\n   | mfile| Mostrar  Arquivo     |#|\n   | cmd  | Prompt   Comando     |#|\n   | sair | Encerrar Programa    |#|\n");
+	snprintf(sendBuff, sizeof(sendBuff), "\n\t\t   | CODE |             MENU        |  #  |\n\t\t   | cdir |  Criar      Diretório   |  #  |\n\t\t   | rdir |  Remover    Diretório   |  #  |\n\t\t   | edir |  Entrar     Diretório   |  #  |\n\t\t   | sdir |  Sair       Diretório   |  #  |\n\t\t   | mdir |  Mostrar    Diretório   |  #  |\n\t\t   | cfile|  Criar      Arquivo     |  #  |\n\t\t   | rfile|  Remover    Arquivo     |  #  |\n\t\t   | efile|  Escrever   Arquivo     |  #  |\n\t\t   | mfile|  Mostrar    Arquivo     |  #  |\n\t\t   | cmd  |  Prompt     Comando     |  #  |\n\t\t   | sair |  Encerrar   Programa    |  #  |\n");
 	send(connfd,sendBuff,strlen(sendBuff), 0);
 }
 

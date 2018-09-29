@@ -14,7 +14,7 @@
 #define SERVER_IP "127.0.0.1"
 #define BYTE 1024
 #define PORTA 5000
-#define TITULO "\n ###### EXPLORADOR DE ARQUIVOS CLIENTE ######\n\n"
+#define TITULO "\n |#|                   SISTEMAS DE ARQUIVOS                   |#|\n"
 
 /* Declaração de Métodos */
 void imprimirAguarde(void);
@@ -24,8 +24,9 @@ int main(int argc, char *argv[])
 {
 
 	setlocale(LC_ALL, "Portuguese");
-    char mensagem[BYTE], *loc;
-    int tbuf, skt, escolha;
+	
+    char recvBuff[BYTE];
+    int tamBuff, skt;
     struct sockaddr_in serv;
     system("clear");
 
@@ -34,46 +35,44 @@ int main(int argc, char *argv[])
     serv.sin_family = AF_INET;
     serv.sin_addr.s_addr = inet_addr(SERVER_IP);
     serv.sin_port = htons (PORTA);
-    memset (&(serv.sin_zero), 0x00, sizeof (serv.sin_zero));
+    memset(&(serv.sin_zero), 0x00, sizeof (serv.sin_zero));
 
     /**Inicializa a comunicação com o Servidor*/
     while(connect (skt, (struct sockaddr *)&serv, sizeof (struct sockaddr)) != 0){
         imprimirAguarde();      ///AGUARDA SERVIDOR SE COMUNICAR
     }
-    printf(">> A Conexão com o Servidor %s foi estabelecida na porta %d\n\n",SERVER_IP,PORTA);
-    printf(">> Envie sair pra encerrar ou -h para ajuda \n\n");
+    printf("\n\n>> A Conexao com o Servidor '%s' foi estabelecida na porta:%d\n\n",SERVER_IP,PORTA);
+    printf(">> Digite:");
+	printf("\n\t\t   |  #  |     INSTRUCOES DE USO    |  #  |\n\t\t   | -h  |   Abrir      Menu        |  #  |\n\t\t   | sair|   Encerrar   Programa    |  #  |\n");
+	
 
 
-    /**Recebe Mensagem do Servidor*/
-    tbuf = recv (skt, mensagem, BYTE, 0);
-    mensagem[tbuf] = 0x00;
-    printf (">: %s\n",mensagem);
-
-    /**Envia mensagem para o Servidor*/
-    //strcpy(mensagem, "Cliente diz: olá!!!");
-    //send(skt, mensagem, strlen(mensagem), 0 );
+    /**Recebe Buffer do Servidor*/
+    tamBuff = recv (skt, recvBuff, BYTE, 0);
+    recvBuff[tamBuff] = 0x00;
+    printf (">: %s\n",recvBuff);
 
 
     /**Loop de Comunicação entre Cliente e Servidor*/
     do{
         ///envia
         printf("> ");
-        gets(mensagem);
-		if (strlen(mensagem)==0) strcpy(mensagem," ");
-        send(skt, mensagem, strlen(mensagem), 0);
+        gets(recvBuff);
+		if (strlen(recvBuff)==0) strcpy(recvBuff," ");
+        send(skt, recvBuff, strlen(recvBuff), 0);
 
-		if (strcmp(mensagem,"sair")!= 0)
+		if (strcmp(recvBuff,"sair")!= 0)
 		{
-			tbuf = recv (skt, mensagem, BYTE, 0);
-			mensagem[tbuf] = 0x00;
-			printf ("> %s\n",mensagem);
+			tamBuff = recv (skt, recvBuff, BYTE, 0);
+			recvBuff[tamBuff] = 0x00;
+			printf (">: %s\n",recvBuff);
 		}
-    }while(strcmp(mensagem,"sair")!= 0);
+    }while(strcmp(recvBuff,"sair")!= 0);
 
 
     /**Finaliza a conexão! */
     close(skt);
-    printf (">>A conexão com o servidor foi finalizada!!!\n\n");
+    printf (">> A conexao com o Servidor foi Finalizada!!!\n\n");
 	sleep(3);
     exit(0);
 }
@@ -82,14 +81,17 @@ int main(int argc, char *argv[])
 
 void imprimirAguarde(){
     int i=0;
-    char dot[12] = "";
+    char v[12] = "";
     for(i=0; i<4;i++){
         system("clear");
         printf(TITULO);
-        printf("\n\nProcurando servidor.");
-        printf("\nAguarde %s\n\n", dot);
-        strcat(dot,".");
+        printf("\n |#|                   Procurando servidor.                   |#|");
+        printf("\n                            Aguarde %s                      \n", v);
+		printf("\n |#|                                                          |#|\n");
+        strcat(v,".");
         sleep(1);
     }
-    strcpy(dot, "");
+    strcpy(v, "");
+	    
+
 }
