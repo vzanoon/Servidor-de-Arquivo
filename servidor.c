@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 
 #define BYTE 16384
-#define PORTA 5000
+#define PORTA 5000 
 #define BACKLOG 10
 
 void Ajuda(int connfd);
@@ -32,77 +32,86 @@ void Invalido(int connfd);
 void retENT(char *recvBuff);
 void* pthreads_worker(void *connect);
 
-
 char current_dir_raiz[BYTE];
+
 pthread_mutex_t mutex;
 
 
 int main(int argc, char *argv[]){
 	
 	setlocale(LC_ALL, "Portuguese");
-	
-	/*Listen File Descriptor (listenfd) and Conection File Descriptor (connfd)*/
 
 	int listenfd = 0, connfd = 0, sktbind = 0, sktlisten = 0, *id_socket;
 	struct sockaddr_in serv_addr; // por alocação automática
 
 	char sendBuff[BYTE];
 	char recvBuff[BYTE];
-	char current_dir_name[BYTE];
 	int tamBuff=0;
 
-	/* Zera a struct*/
-	listenfd = socket(AF_INET, SOCK_STREAM,6); // AF_INET  Arpa Internet Protocols, SOCK_STREAM socket por stream, 0  Internet Protocol
+	/* socket: Protocolo IPv4, tipo de comunicação (TCP), IP (0)*/
+	listenfd = socket(AF_INET, SOCK_STREAM,0); 
 	
-	if (listenfd == -1) // verifica se ocorreu erro na criação do socket descritor
+	/* Verifica se ocorreu erro na criação do socket descritor */
+	if (listenfd == -1) 
 	{
-		printf("Erro: Criar socket descritor.\n");
+		printf("Error: Criar socket descritor.\n");
 	}else
-		printf("Criado socket descritor!\n");
+		printf("Socket descritor OK!\n");
 	
-	
-	memset(&serv_addr, '0', sizeof(serv_addr)); // ou poderia usar o bzero
-	memset(sendBuff, '0', sizeof(sendBuff)); // preenche área de memoria com 0
-	memset(recvBuff, '0', sizeof(recvBuff)); // preenche área de memoria com 0
+	/* Garante que os campos sejam inicializados com 0 */
+	memset(&serv_addr, '0', sizeof(serv_addr)); 
+	memset(sendBuff, '0', sizeof(sendBuff)); 
+	memset(recvBuff, '0', sizeof(recvBuff)); 
 
-	/*Instancia os campos do Struct*/
+	/* Instancia os campos do Struct*/
 	serv_addr.sin_family = AF_INET; // familia
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); // endereço
 	serv_addr.sin_port = htons(PORTA); // porta
 
-	/* Associa um endereço ao descritor do socket */
-	sktbind = bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); // associa esse soquete a um porta na sua máquina local
+	/* bind: Associa um endereço ao descritor do socket e ao número da porta definido em s_addr*/
+	sktbind = bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
+	 
 	
 	char mybuf[80];
+	/* inet_ntop() converte endereços IPv4 E IPv6 de bin->text */
 	inet_ntop(AF_INET, &serv_addr.sin_addr, mybuf, 80);
 	printf("Socket IP:PORTA = %d, %s, %d\n", serv_addr.sin_family, mybuf, ntohs(serv_addr.sin_port));
 	
-	
-	if (sktbind == -1) // verifica se ocorreu erro na associção do socket a um endereço
+	/* verifica se ocorreu erro na associção do socket a um endereço */
+	if (sktbind == -1) 
 	{
-		printf("Erro: Bind socket.\n");
+		printf("Error: Bind socket.\n");
 	}else
-		printf("Bind socket!\n");	
+		printf("Bind socket OK!\n");	
 	
-	sktlisten = listen(listenfd, BACKLOG);	// fila para escutar os clientes da conexão socket
+	/* listen: fila para escutar os clientes da conexão socket */
+	sktlisten = listen(listenfd, BACKLOG);	
 	
-	if (sktlisten == -1) // verifica se ocorreu erro na fila
+	/* verifica se ocorreu erro na fila */
+	if (sktlisten == -1) 
 	{
-		printf("Erro: Listen socket.\n");
+		printf("Error: Listen socket.\n");
 	}else
-		printf("Listen socket!\n");	
-
-	getcwd(current_dir_raiz, BYTE); //obtém o nome do caminho do diretório raiz de trabalho 
+		printf("Listen socket OK!\n");	
 	
+    /* obtém o nome do caminho do diretório raiz de trabalho */
+	getcwd(current_dir_raiz, BYTE); 
+	
+	/* Inicializa o mutex referenciado por mutex */
 	pthread_mutex_init(&mutex, NULL);
 	
 	while(1){
 		
-		printf("Aguardando conexao.\n");
+		printf("Aguardando conexao...\n");
+		
+		/* Accept() extrai a primeira solicitação da fila de conexões pendentes
+		cria um novo socket conectado e retorna o descritor de arquivo
+		referente a este socket */
 		
 		while(connfd = accept(listenfd, (struct sockaddr*)NULL, NULL))
 		{
-			// cria a pthread do cliente
+			/* Cria a pthread do cliente */
+			printf("Conexao aceita!\n");
 			pthread_t pthread_c; 				
 			pthread_create(&pthread_c, NULL, pthreads_worker, &connfd);
 			sleep(1);
@@ -122,7 +131,6 @@ void* pthreads_worker(void *connect){
 		char current_dir[BYTE]; // área onde será armazenado o nome do diretório de trabalho
 		int tamBuff=0;
 		
-		//DIR *current_dir = NULL;
 		
 		id_socket = malloc(sizeof(BYTE)); // aloca memoria para o conteudo do endereço ID do socket.
 		//printf("\n---SIZEOF %i --- \n", (int) sizeof(BYTE)); // return : 4
@@ -132,11 +140,6 @@ void* pthreads_worker(void *connect){
 		printf(">: Cliente %i conectado!\n", id_socket);
 	
 		strcpy(current_dir, current_dir_raiz);
-		
-		
-		// Função getcwd() obtém o nome do caminho do diretório de trabalho
-		//getcwd(current_dir_name, sizeof(current_dir_name));
-		//current_dir = opendir(current_dir_name);	// abre um diretório
 		printf("> Diretório atual do Servidor: %s\n\n",current_dir);		
 		
 		memset(sendBuff,0, sizeof(sendBuff));
@@ -154,7 +157,7 @@ void* pthreads_worker(void *connect){
 			
 			if (tamBuff < 0) // erro na recepção de mensagem
 			{
-				printf("Erro: Buffer de entrada.\n");
+				printf("Error: Buffer de entrada.\n");
 				snprintf(recvBuff, sizeof(recvBuff), "sair");
 				tamBuff = strlen(recvBuff);
 
@@ -234,6 +237,7 @@ void* pthreads_worker(void *connect){
 		}while(strcmp(recvBuff,"sair") != 0);
 	
 		printf(">: Cliente %i desconectado.\n", id_socket);
+		
 		close(connfd);
 		free(id_socket);
 		pthread_exit(0);
@@ -345,7 +349,7 @@ void Entrar_DIR(int connfd, char *current_dir)
 		recvBuff[tamBuff] = 0x00;
 		retENT(recvBuff);
 		
-		memset(pasta, 0, sizeof(pasta)); // zera buffer
+		memset(pasta, 0, sizeof(pasta)); // zera buffer pasta
 		
 		strcpy(pasta,current_dir); // copiar o nome do diretorio corrente p/ buffer pasta
 		strcat(pasta,"/"); // concatena com uma barra
@@ -512,7 +516,7 @@ void Remover_FILE(int connfd, char *current_dir)
 		char comando[BYTE]  = "rm ";
 		strcat(comando,recvBuff);
 		
-		// Mutex somente para remoção!
+		// Mutex somente para a remoção!
 		pthread_mutex_lock(&mutex);
 			if (system(comando) == 0)
 			{
